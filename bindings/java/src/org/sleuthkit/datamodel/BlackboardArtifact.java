@@ -1,7 +1,7 @@
 /*
  * Sleuth Kit Data Model
  *
- * Copyright 2011-2017 Basis Technology Corp.
+ * Copyright 2011-2018 Basis Technology Corp.
  * Contact: carrier <at> sleuthkit <dot> org
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -55,7 +55,7 @@ public class BlackboardArtifact implements Content {
 	private final String displayName;
 	private ReviewStatus reviewStatus;
 	private final SleuthkitCase sleuthkitCase;
-	private final List<BlackboardAttribute> attrsCache = new ArrayList<BlackboardAttribute>();
+	private final List<BlackboardAttribute> attrsCache = new ArrayList<>();
 	private boolean loadedCacheFromDb = false;
 	private Content parent;
 	private String uniquePath;
@@ -65,6 +65,8 @@ public class BlackboardArtifact implements Content {
 	private volatile boolean checkedHasChildren;
 	private volatile boolean hasChildren;
 	private volatile int childrenCount;
+
+	private Type artifactType; //since this require a db roundtrip, it is initialized lazily in getArtifactType()
 
 	/**
 	 * Constructs an artifact that has been posted to the blackboard. An
@@ -180,6 +182,21 @@ public class BlackboardArtifact implements Content {
 	 */
 	public int getArtifactTypeID() {
 		return this.artifactTypeId;
+	}
+
+	/**
+	 * Get the artifact Type for this artifact/
+	 *
+	 * @return Ther artifact Type.
+	 *
+	 * @throws TskCoreException
+	 */
+	public synchronized Type getArtifactType() throws TskCoreException {
+		if (artifactType == null) {
+			artifactType = sleuthkitCase.getArtifactType(artifactTypeId);
+		}
+
+		return artifactType;
 	}
 
 	/**
