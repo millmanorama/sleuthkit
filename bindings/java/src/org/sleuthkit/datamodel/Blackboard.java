@@ -46,11 +46,12 @@ public final class Blackboard implements Closeable {
 	 * events that may be derived from it, and broadcasting a notification that
 	 * the artifact is ready for further analysis.
 	 *
-	 * @param artifact The artifact to be posted.
+	 * @param moduleName The name of the module posting this artifact.
+	 * @param artifact   The artifact to be posted.
 	 *
 	 * @throws BlackboardException If there is a problem posting the artifact.
 	 */
-	public synchronized void postArtifact(BlackboardArtifact artifact) throws BlackboardException {
+	public synchronized void postArtifact(String moduleName, BlackboardArtifact artifact) throws BlackboardException {
 		if (null == caseDb) {
 			throw new BlackboardException("Blackboard has been closed");
 		}
@@ -60,7 +61,7 @@ public final class Blackboard implements Closeable {
 		} catch (TskCoreException ex) {
 			throw new BlackboardException("Failed to add events for artifact: " + artifact, ex);
 		}
-		caseDb.postTSKEvent(new ArtifactPostedEvent(artifact));
+		caseDb.postTSKEvent(new ArtifactPostedEvent(moduleName, artifact));
 
 	}
 
@@ -71,17 +72,18 @@ public final class Blackboard implements Closeable {
 	 * broadcasting notifications that the artifacts are ready for further
 	 * analysis.
 	 *
-	 * @param artifacts The artifacts to be posted.
+	 * @param moduleName The name of the module posting these artifacts.
+	 * @param artifacts  The artifacts to be posted.
 	 *
 	 * @throws BlackboardException If there is a problem posting the artifacts.
 	 */
-	public synchronized void postArtifacts(Collection<BlackboardArtifact> artifacts) throws BlackboardException {
+	public synchronized void postArtifacts(String moduleName, Collection<BlackboardArtifact> artifacts) throws BlackboardException {
 		/*
 		 * For now this just posts them one by one, but in the future it could
 		 * be smarter and use transactions, post a single bulk event, etc.
 		 */
 		for (BlackboardArtifact artifact : artifacts) {
-			postArtifact(artifact);
+			postArtifact(moduleName, artifact);
 		}
 	}
 
@@ -189,12 +191,32 @@ public final class Blackboard implements Closeable {
 	final public static class ArtifactPostedEvent {
 
 		private final BlackboardArtifact artifact;
+		private final String moduleName;
 
+		/**
+		 * Get the name of the module that posted this artifact.
+		 *
+		 * @return The name of the module that posted this artifact.
+		 */
+		public String getModuleName() {
+			return moduleName;
+		}
+
+		/**
+		 * Get the artifact that was posted.
+		 *
+		 * @return The artifact.
+		 */
 		public BlackboardArtifact getArtifact() {
 			return artifact;
 		}
 
-		ArtifactPostedEvent(BlackboardArtifact artifact) {
+		/**
+		 * @param moduleName The name of the module that posted the artifact.
+		 * @param artifact   The artifact that was posted.
+		 */
+		ArtifactPostedEvent(String moduleName, BlackboardArtifact artifact) {
+			this.moduleName = moduleName;
 			this.artifact = artifact;
 		}
 	}
