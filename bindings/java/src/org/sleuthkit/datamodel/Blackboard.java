@@ -18,8 +18,11 @@
  */
 package org.sleuthkit.datamodel;
 
+import com.google.common.collect.ImmutableSet;
 import java.io.Closeable;
 import java.util.Collection;
+import java.util.Collections;
+import org.sleuthkit.datamodel.BlackboardArtifact.Type;
 
 /**
  * A representation of the blackboard, a place where artifacts and their
@@ -55,36 +58,55 @@ public final class Blackboard implements Closeable {
 		if (null == caseDb) {
 			throw new BlackboardException("Blackboard has been closed");
 		}
+		addEventsFromArtifacts(artifact);
 
+		try {
+			caseDb.fireTSKEvent(new ArtifactsPostedEvent(moduleName, artifact));
+		} catch (TskCoreException ex) {
+			throw new BlackboardException("Error firing ArtifactPostedEvent", ex);
+		}
+
+	}
+
+	private synchronized void addEventsFromArtifacts(BlackboardArtifact artifact) throws BlackboardException {
 		try {
 			caseDb.getTimelineManager().addEventsFromArtifact(artifact);
 		} catch (TskCoreException ex) {
 			throw new BlackboardException("Failed to add events for artifact: " + artifact, ex);
 		}
-		caseDb.postTSKEvent(new ArtifactPostedEvent(moduleName, artifact));
-
 	}
 
 	/**
 	 * Posts a Collection of artifacts. The artifacts should be complete (all
 	 * attributes have been added) before being posted. Posting the artifacts
 	 * includes making any events that may be derived from them, and
-	 * broadcasting notifications that the artifacts are ready for further
+	 * broadcasting a notification that the artifacts are ready for further
 	 * analysis.
 	 *
-	 * @param moduleName The name of the module posting these artifacts.
-	 * @param artifacts  The artifacts to be posted.
+	 * @param moduleName   The name of the module posting these artifacts.
+	 * @param artifactType The type of artifacts that are being posted. This
+	 *                     should match the artifacts, but is not checked.
+	 * @param artifacts    The artifacts to be posted.
 	 *
 	 * @throws BlackboardException If there is a problem posting the artifacts.
 	 */
-	public synchronized void postArtifacts(String moduleName, Collection<BlackboardArtifact> artifacts) throws BlackboardException {
+	public synchronized void postArtifacts(String moduleName, Type artifactType, Collection<BlackboardArtifact> artifacts) throws BlackboardException {
+		if (null == caseDb) {
+			throw new BlackboardException("Blackboard has been closed");
+		}
 		/*
-		 * For now this just posts them one by one, but in the future it could
-		 * be smarter and use transactions, post a single bulk event, etc.
+		 * For now this just processes them one by one, but in the future it
+		 * could be smarter and use transactions, etc.
 		 */
 		for (BlackboardArtifact artifact : artifacts) {
-			postArtifact(moduleName, artifact);
+			addEventsFromArtifacts(artifact);
 		}
+
+		caseDb.fireTSKEvent(new ArtifactsPostedEvent(moduleName, artifactType, artifacts));
+	}
+
+	public synchronized void postArtifacts(String moduleName, BlackboardArtifact.ARTIFACT_TYPE artifactType, Collection<BlackboardArtifact> artifacts) throws BlackboardException {
+		this.postArtifacts(moduleName, new Type(artifactType), artifacts);
 	}
 
 	/**
@@ -184,14 +206,19 @@ public final class Blackboard implements Closeable {
 	}
 
 	/**
-	 * Event published by SleuthkitCase when an artifact is posted. A posted
-	 * artifact is complete (all attributes have been added) and ready for
-	 * further processing.
+	 * Event published by SleuthkitCase when one or more artifacts are posted. A
+	 * posted artifact is complete (all attributes have been added) and ready
+	 * for further processing.
 	 */
-	final public static class ArtifactPostedEvent {
+	final public static class ArtifactsPostedEvent {
 
-		private final BlackboardArtifact artifact;
+		private final ImmutableSet<BlackboardArtifact> artifacts;
 		private final String moduleName;
+		private final Type artifactType;
+
+		public Type getArtifactType() {
+			return artifactType;
+		}
 
 		/**
 		 * Get the name of the module that posted this artifact.
@@ -203,21 +230,34 @@ public final class Blackboard implements Closeable {
 		}
 
 		/**
-		 * Get the artifact that was posted.
+		 * Get the artifacts that were posted.
 		 *
 		 * @return The artifact.
 		 */
-		public BlackboardArtifact getArtifact() {
-			return artifact;
+		public Collection<BlackboardArtifact> getArtifacts() {
+			return artifacts;
+		}
+
+		/**
+		 * @param moduleName   The name of the module that posted the artifact.
+		 * @param artifactType The type of artifacts that were posted. This
+		 *                     should match the artifacts, but is not checked.
+		 * @param artifacts    The artifacts that were posted.
+		 */
+		ArtifactsPostedEvent(String moduleName, Type artifactType, Collection<BlackboardArtifact> artifacts) {
+			this.moduleName = moduleName;
+			this.artifactType = artifactType;
+			this.artifacts = ImmutableSet.copyOf(artifacts);
 		}
 
 		/**
 		 * @param moduleName The name of the module that posted the artifact.
 		 * @param artifact   The artifact that was posted.
+		 *
+		 * @throws org.sleuthkit.datamodel.TskCoreException
 		 */
-		ArtifactPostedEvent(String moduleName, BlackboardArtifact artifact) {
-			this.moduleName = moduleName;
-			this.artifact = artifact;
+		ArtifactsPostedEvent(String moduleName, BlackboardArtifact artifact) throws TskCoreException {
+			this(moduleName, artifact.getArtifactType(), Collections.singleton(artifact));
 		}
 	}
 }
