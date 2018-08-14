@@ -1,3 +1,5 @@
+ [![Codacy Badge](https://api.codacy.com/project/badge/Grade/25c93bfef84647788059b7ae34bf0270)](https://www.codacy.com/app/millmanorama/sleuthkit_2?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=millmanorama/sleuthkit&amp;utm_campaign=Badge_Grade)
+ 
                           The Sleuth Kit
                             README File
 
