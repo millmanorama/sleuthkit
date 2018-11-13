@@ -56,6 +56,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.MissingResourceException;
+import java.util.Objects;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.UUID;
@@ -78,6 +81,8 @@ import org.sleuthkit.datamodel.TskData.TSK_FS_META_FLAG_ENUM;
 import org.sleuthkit.datamodel.TskData.TSK_FS_META_TYPE_ENUM;
 import org.sleuthkit.datamodel.TskData.TSK_FS_NAME_FLAG_ENUM;
 import org.sleuthkit.datamodel.TskData.TSK_FS_NAME_TYPE_ENUM;
+import org.sleuthkit.datamodel.timeline.ArtifactEventType;
+import org.sleuthkit.datamodel.timeline.EventType;
 import org.sqlite.SQLiteConfig;
 import org.sqlite.SQLiteDataSource;
 import org.sqlite.SQLiteJDBCLoader;
@@ -95,7 +100,7 @@ public class SleuthkitCase {
 	 * tsk/auto/tsk_db.h.
 	 */
 	private static final CaseDbSchemaVersionNumber CURRENT_DB_SCHEMA_VERSION
-			= new CaseDbSchemaVersionNumber(8, 1);
+			= new CaseDbSchemaVersionNumber(8, 2);
 
 	private static final long BASE_ARTIFACT_ID = Long.MIN_VALUE; // Artifact ids will start at the lowest negative value
 	private static final Logger logger = Logger.getLogger(SleuthkitCase.class.getName());
@@ -108,64 +113,63 @@ public class SleuthkitCase {
 	private static final String SQL_ERROR_LIMIT_GROUP = "54";
 	private static final String SQL_ERROR_INTERNAL_GROUP = "xx";
 	private static final int MIN_USER_DEFINED_TYPE_ID = 10000;
-	private static final Set<String> CORE_TABLE_NAMES_SET = new HashSet<String>(Arrays.asList( 
-		"tsk_events",
-		"tsk_event_types",
-		"tsk_db_info",
-		"tsk_objects",
-		"tsk_image_info",
-		"tsk_image_names",
-		"tsk_vs_info",
-		"tsk_vs_parts",
-		"tsk_fs_info",
-		"tsk_file_layout",
-		"tsk_files",
-		"tsk_files_path",
-		"tsk_files_derived",
-		"tsk_files_derived_method",
-		"tag_names",
-		"content_tags",
-		"blackboard_artifact_tags",
-		"blackboard_artifacts",
-		"blackboard_attributes",
-		"blackboard_artifact_types",
-		"blackboard_attribute_types",
-		"data_source_info",
-		"file_encoding_types",
-		"ingest_module_types",
-		"ingest_job_status_types",
-		"ingest_modules",
-		"ingest_jobs",
-		"ingest_job_modules",
-		"account_types",
-		"accounts",
-		"account_relationships",
-		"review_statuses",
-		"reports,"));
-	private static final Set<String> CORE_INDEX_NAMES_SET = new HashSet<String>(Arrays.asList( 
-		"parObjId",
-		"layout_objID",
-		"artifact_objID",
-		"artifact_artifact_objID",
-		"artifact_typeID",
-		"attrsArtifactID",
-		"mime_type",
-		"file_extension",
-		"relationships_account1",
-		"relationships_account2",
-		"relationships_relationship_source_obj_id",
-		"relationships_date_time",
-		"relationships_relationship_type",
-		"relationships_data_source_obj_id",	"events_data_source_obj_id",
-		"events_event_id_hash_hit",
-		"events_event_id_tagged",
-		"events_file_obj_id",
-		"events_artifact_id",
-		"events_sub_type_short_description_time",
-		"events_base_type_short_description_time",
-		"events_time",
-		"events_known_state"));
-
+	private static final Set<String> CORE_TABLE_NAMES_SET = new HashSet<String>(Arrays.asList(
+			"tsk_events",
+			"tsk_event_types",
+			"tsk_db_info",
+			"tsk_objects",
+			"tsk_image_info",
+			"tsk_image_names",
+			"tsk_vs_info",
+			"tsk_vs_parts",
+			"tsk_fs_info",
+			"tsk_file_layout",
+			"tsk_files",
+			"tsk_files_path",
+			"tsk_files_derived",
+			"tsk_files_derived_method",
+			"tag_names",
+			"content_tags",
+			"blackboard_artifact_tags",
+			"blackboard_artifacts",
+			"blackboard_attributes",
+			"blackboard_artifact_types",
+			"blackboard_attribute_types",
+			"data_source_info",
+			"file_encoding_types",
+			"ingest_module_types",
+			"ingest_job_status_types",
+			"ingest_modules",
+			"ingest_jobs",
+			"ingest_job_modules",
+			"account_types",
+			"accounts",
+			"account_relationships",
+			"review_statuses",
+			"reports,"));
+	private static final Set<String> CORE_INDEX_NAMES_SET = new HashSet<String>(Arrays.asList(
+			"parObjId",
+			"layout_objID",
+			"artifact_objID",
+			"artifact_artifact_objID",
+			"artifact_typeID",
+			"attrsArtifactID",
+			"mime_type",
+			"file_extension",
+			"relationships_account1",
+			"relationships_account2",
+			"relationships_relationship_source_obj_id",
+			"relationships_date_time",
+			"relationships_relationship_type",
+			"relationships_data_source_obj_id", "events_data_source_obj_id",
+			"events_event_id_hash_hit",
+			"events_event_id_tagged",
+			"events_file_obj_id",
+			"events_artifact_id",
+			"events_sub_type_short_description_time",
+			"events_base_type_short_description_time",
+			"events_time",
+			"events_known_state"));
 
 	private final ConnectionPool connections;
 	private final Map<Long, VirtualDirectory> rootIdsToCarvedFileDirs = new HashMap<>();
@@ -202,7 +206,7 @@ public class SleuthkitCase {
 
 	private final Object communicationsMgrInstanceLock = new Object();
 	private final Object blackboardInstanceLock = new Object();
- 	private final Object timelineMgrInstanceLock = new Object();
+	private final Object timelineMgrInstanceLock = new Object();
 
 	private final Map<String, Set<Long>> deviceIdToDatasourceObjIdMap = new HashMap<>();
 
@@ -218,7 +222,7 @@ public class SleuthkitCase {
 
 	void fireTSKEvent(Object event) {
 		eventBus.post(event);
-	} 
+	}
 
 	// Cache of frequently used content objects (e.g. data source, file system).
 	private final Map<Long, Content> frequentlyUsedContentMap = new HashMap<>();
@@ -355,7 +359,7 @@ public class SleuthkitCase {
 		initNextArtifactId();
 		updateDatabaseSchema(null);
 
- 		try (CaseDbConnection connection = connections.getConnection()) {
+		try (CaseDbConnection connection = connections.getConnection()) {
 			initIngestModuleTypes(connection);
 			initIngestStatusTypes(connection);
 			initReviewStatuses(connection);
@@ -363,7 +367,7 @@ public class SleuthkitCase {
 			populateHasChildrenMap(connection);
 			updateExaminers(connection);
 		}
- 	}
+	}
 
 	/**
 	 * Returns a set of core table names in the SleuthKit Case database.
@@ -381,7 +385,7 @@ public class SleuthkitCase {
 	 */
 	static Set<String> getCoreIndexNames() {
 		return CORE_INDEX_NAMES_SET;
- 	}
+	}
 
 	/**
 	 * Use the internal map to determine whether the content object has children
@@ -466,6 +470,22 @@ public class SleuthkitCase {
 		synchronized (timelineMgrInstanceLock) {
 			if (null == timelineMgrInstance) {
 				timelineMgrInstance = new TimelineManager(this);
+			}
+			return timelineMgrInstance;
+		}
+	}
+
+	/**
+	 *
+	 *
+	 * @return a TimelineManager
+	 *
+	 * @throws org.sleuthkit.datamodel.TskCoreException
+	 */
+	private TimelineManager getTimelineManager(CaseDbConnection connection) throws TskCoreException {
+		synchronized (timelineMgrInstanceLock) {
+			if (null == timelineMgrInstance) {
+				timelineMgrInstance = new TimelineManager(this, connection);
 			}
 			return timelineMgrInstance;
 		}
@@ -1630,7 +1650,7 @@ public class SleuthkitCase {
 		}
 
 		acquireSingleUserCaseWriteLock();
- 
+
 		try (Statement statement = connection.createStatement();) {
 			// create examiners table
 			if (this.dbType.equals(DbType.SQLITE)) {
@@ -1672,7 +1692,7 @@ public class SleuthkitCase {
 		}
 
 		acquireSingleUserCaseWriteLock();
- 
+
 		try (Statement statement = connection.createStatement();) {
 			String primaryKeyType;
 			switch (getDatabaseType()) {
@@ -1685,7 +1705,7 @@ public class SleuthkitCase {
 				default:
 					throw new TskCoreException("Unsupported data base type: " + getDatabaseType().toString());
 			}
-		 
+
 			//create and initialize tsk_event_types tables
 			statement.execute("CREATE TABLE tsk_event_types ("
 					+ " event_type_id " + primaryKeyType + " PRIMARY KEY, "
@@ -1720,7 +1740,6 @@ public class SleuthkitCase {
 					+ " full_description TEXT NOT NULL, "
 					+ " med_description TEXT NOT NULL, "
 					+ " short_description TEXT NOT NULL, "
-					+ " known_state INTEGER NOT NULL, "//boolean 
 					+ " hash_hit INTEGER NOT NULL, "//boolean 
 					+ " tagged INTEGER NOT NULL, "
 					+ "FOREIGN KEY(data_source_obj_id) REFERENCES data_source_info(obj_id), "
@@ -1738,14 +1757,37 @@ public class SleuthkitCase {
 			statement.execute("CREATE INDEX events_sub_type_short_description_time ON tsk_events(sub_type, short_description, time)");
 			statement.execute("CREATE INDEX events_base_type_short_description_time ON tsk_events(base_type, short_description, time)");
 			statement.execute("CREATE INDEX events_time ON tsk_events(time)");
-			statement.execute("CREATE INDEX events_known_state ON tsk_events(known_state)"); 
+
+			//////populate the tsk_events table
+			TimelineManager timelineManager = getTimelineManager(connection);
+			//grab ids of all files
+			List<Long> fileIDs = findAllFileIdsWhere("name != '.' AND name != '..'"
+					+ " AND type != " + TskData.TSK_DB_FILES_TYPE_ENUM.SLACK.ordinal()); //NON-NLS
+			for (Long fileID : fileIDs) {
+				AbstractFile f = getAbstractFileById(fileID);
+				if (nonNull(f)) {				//for each file, add the mac time events
+					timelineManager.addAbstractFileEvents(f, connection);
+				} else {
+					logger.log(Level.WARNING, "Failed to get data for file : {0}", fileID); // NON-NLS
+				}
+			}
+			//insert artifact based events
+			for (EventType type : timelineManager.getEventTypes()) {
+				//skip file_system events, they are already handled above.
+				if (type instanceof ArtifactEventType) {
+					ArtifactEventType artifactEventType = (ArtifactEventType) type;
+					for (BlackboardArtifact bbart : getBlackboardArtifacts(artifactEventType.getArtifactTypeID())) {
+						timelineManager.addEventsFromArtifact(bbart, connection);
+					}
+				}
+			}
 
 			return new CaseDbSchemaVersionNumber(8, 2);
 		} finally {
 			releaseSingleUserCaseWriteLock();
 		}
 	}
- 
+
 	/**
 	 * Extract the extension from a file name.
 	 *
@@ -5732,7 +5774,6 @@ public class SleuthkitCase {
 			String otherDetails, TskData.EncodingType encodingType) throws TskCoreException {
 
 		acquireSingleUserCaseWriteLock();
-		TimelineManager timelineManager = getTimelineManager();
 
 		CaseDbTransaction transaction = beginTransaction();
 		CaseDbConnection connection = transaction.getConnection();
@@ -7513,9 +7554,10 @@ public class SleuthkitCase {
 	 *
 	 * @return A list of BlackboardArtifact objects.
 	 *
-	 * @throws SQLException Thrown if there is a problem iterating through the
-	 *                      result set.
-	 * @throws TskCoreException  Thrown if there is an error looking up the artifact type id
+	 * @throws SQLException     Thrown if there is a problem iterating through
+	 *                          the result set.
+	 * @throws TskCoreException Thrown if there is an error looking up the
+	 *                          artifact type id
 	 */
 	private List<BlackboardArtifact> resultSetToArtifacts(ResultSet rs) throws SQLException, TskCoreException {
 		ArrayList<BlackboardArtifact> artifacts = new ArrayList<BlackboardArtifact>();
@@ -7664,7 +7706,7 @@ public class SleuthkitCase {
 			connection.executeUpdate(statement, "UPDATE tsk_files " //NON-NLS
 					+ "SET known='" + fileKnown.getFileKnownValue() + "' " //NON-NLS
 					+ "WHERE obj_id=" + id); //NON-NLS
-			
+
 			file.setKnown(fileKnown);
 		} catch (SQLException ex) {
 			throw new TskCoreException("Error setting Known status.", ex);
@@ -8497,7 +8539,7 @@ public class SleuthkitCase {
 		acquireSingleUserCaseWriteLock();
 		ResultSet resultSet = null;
 		try {
-			Examiner currentExaminer= getCurrentExaminer();
+			Examiner currentExaminer = getCurrentExaminer();
 			// "INSERT INTO blackboard_artifact_tags (artifact_id, tag_name_id, comment, examiner_id) VALUES (?, ?, ?, ?)"), //NON-NLS
 			PreparedStatement statement = connection.getPreparedStatement(PREPARED_STATEMENT.INSERT_ARTIFACT_TAG, Statement.RETURN_GENERATED_KEYS);
 			statement.clearParameters();
@@ -9993,7 +10035,7 @@ public class SleuthkitCase {
 				} catch (SQLException ex) {
 					if ((ex.getErrorCode() == SQLITE_BUSY_ERROR || ex.getErrorCode() == DATABASE_LOCKED_ERROR) && retryCounter < MAX_RETRIES) {
 						try {
-							
+
 							// We do not notify of error here, as this is not an
 							// error condition. It is likely a temporary busy or
 							// locked issue and we will retry.
@@ -10059,7 +10101,7 @@ public class SleuthkitCase {
 					}
 				}
 			}
-			
+
 			// rethrow the exception if we bailed because of too many retries
 			if (lastException != null) {
 				throw lastException;

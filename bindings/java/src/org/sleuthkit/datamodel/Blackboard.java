@@ -30,6 +30,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -81,18 +83,22 @@ public final class Blackboard {
 	 *
 	 */
 	public void postArtifacts(Collection<BlackboardArtifact> artifacts, String moduleName) throws BlackboardException {
-		/*
-		 * For now this just processes them one by one, but in the future it
-		 * could be smarter and use transactions, etc.
-		 */
-		for (BlackboardArtifact artifact : artifacts) {
-			try {
-				caseDb.getTimelineManager().addEventsFromArtifact(artifact);
-			} catch (TskCoreException ex) {
-				throw new BlackboardException("Failed to add events for artifact: " + artifact, ex);
-			}
-		}
 
+		try (SleuthkitCase.CaseDbConnection connection = caseDb.getConnection();) {
+			/*
+			 * For now this just processes them one by one, but in the future it
+			 * could be smarter and use transactions, etc.
+			 */
+			for (BlackboardArtifact artifact : artifacts) {
+				try {
+					caseDb.getTimelineManager().addEventsFromArtifact(artifact, connection);
+				} catch (TskCoreException ex) {
+					throw new BlackboardException("Failed to add events for artifact: " + artifact, ex);
+				}
+			}
+		} catch (TskCoreException ex) {
+			throw new BlackboardException("Failed to get db connection needed to add events for artifacts.", ex);
+		}
 		caseDb.fireTSKEvent(new ArtifactsPostedEvent(artifacts, moduleName));
 	}
 

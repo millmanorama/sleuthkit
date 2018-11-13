@@ -69,7 +69,14 @@ public final class TimelineManager {
 
 	TimelineManager(SleuthkitCase tskCase) throws TskCoreException {
 		sleuthkitCase = tskCase;
-		initializeEventTypes();
+		try (CaseDbConnection connection = sleuthkitCase.getConnection();) {
+			initializeEventTypes(connection);
+		}
+	}
+
+	TimelineManager(SleuthkitCase tskCase, CaseDbConnection connection) throws TskCoreException {
+		sleuthkitCase = tskCase;
+		initializeEventTypes(connection);
 	}
 
 	public SleuthkitCase getSleuthkitCase() {
@@ -346,7 +353,7 @@ public final class TimelineManager {
 		return -1l;
 	}
 
-	private void initializeEventTypes() throws TskCoreException {
+	private void initializeEventTypes(CaseDbConnection con) throws TskCoreException {
 		//initialize root and base event types, these are added to the DB in c++ land
 		eventTypeIDMap.put(EventType.ROOT_EVENT_TYPE.getTypeID(), EventType.ROOT_EVENT_TYPE);
 		eventTypeIDMap.put(EventType.WEB_ACTIVITY.getTypeID(), EventType.WEB_ACTIVITY);
@@ -358,16 +365,15 @@ public final class TimelineManager {
 		eventTypeIDMap.put(EventType.FILE_MODIFIED.getTypeID(), EventType.FILE_MODIFIED);
 
 		//initialize the other event types that aren't added in c++
-		List<EventType> typesToInitialize = new ArrayList<>();
-		typesToInitialize.add(EventType.CUSTOM_TYPES);//Initialize the custom base type
-		typesToInitialize.addAll(EventType.getWebActivityTypes());//Initialize the web events
-		typesToInitialize.addAll(EventType.getMiscTypes());	//initialize the misc events
-		typesToInitialize.add(EventType.OTHER);	//initialize the Other custom type.
+		List<EventType> typesToInitialize = ImmutableList.<EventType>builder()
+				.add(EventType.CUSTOM_TYPES)
+				.addAll(EventType.getWebActivityTypes())
+				.addAll(EventType.getMiscTypes())
+				.add(EventType.OTHER)
+				.build();
 
 		sleuthkitCase.acquireSingleUserCaseWriteLock();
-		try (CaseDbConnection con = sleuthkitCase.getConnection();
-				Statement statement = con.createStatement();) {
-
+		try (Statement statement = con.createStatement();) {
 			for (EventType type : typesToInitialize) {
 				con.executeUpdate(statement,
 						insertOrIgnore(" INTO tsk_event_types(event_type_id, display_name, super_type_id) "
@@ -569,7 +575,7 @@ public final class TimelineManager {
 	 *
 	 * @throws TskCoreException
 	 */
-	Set<TimelineEvent> addEventsFromArtifact(BlackboardArtifact artifact) throws TskCoreException {
+	Set<TimelineEvent> addEventsFromArtifact(BlackboardArtifact artifact, CaseDbConnection connection) throws TskCoreException {
 		Set<TimelineEvent> newEvents = new HashSet<>();
 
 		/*
@@ -588,7 +594,7 @@ public final class TimelineManager {
 				eventType = ObjectUtils.defaultIfNull(eventType, EventType.OTHER);
 			}
 
-			Optional<TimelineEvent> newEvent = addArtifactEvent(EventType.OTHER::buildEventPayload, eventType, artifact);
+			Optional<TimelineEvent> newEvent = addArtifactEvent(EventType.OTHER::buildEventPayload, eventType, artifact, connection);
 			newEvent.ifPresent(newEvents::add);
 
 		} else {
@@ -603,7 +609,7 @@ public final class TimelineManager {
 					.collect(Collectors.toSet());
 
 			for (ArtifactEventType eventType : eventTypesForArtifact) {
-				addArtifactEvent(eventType, artifact)
+				addArtifactEvent(eventType, artifact, connection)
 						.ifPresent(newEvents::add);
 			}
 		}
@@ -623,8 +629,8 @@ public final class TimelineManager {
 	 *
 	 * @throws TskCoreException
 	 */
-	private Optional<TimelineEvent> addArtifactEvent(ArtifactEventType eventType, BlackboardArtifact artifact) throws TskCoreException {
-		return addArtifactEvent(eventType::buildEventPayload, eventType, artifact);
+	private Optional<TimelineEvent> addArtifactEvent(ArtifactEventType eventType, BlackboardArtifact artifact, CaseDbConnection connection) throws TskCoreException {
+		return addArtifactEvent(eventType::buildEventPayload, eventType, artifact, connection);
 	}
 
 	/**
@@ -645,7 +651,7 @@ public final class TimelineManager {
 	 * @throws TskCoreException
 	 */
 	private Optional<TimelineEvent> addArtifactEvent(CheckedFunction<BlackboardArtifact, ArtifactEventType.EventPayload> payloadExtractor,
-			EventType eventType, BlackboardArtifact artifact) throws TskCoreException {
+			EventType eventType, BlackboardArtifact artifact, CaseDbConnection connection) throws TskCoreException {
 		ArtifactEventType.EventPayload eventDescription = payloadExtractor.apply(artifact);
 
 		// if the time is legitimate ( greater than zero ) insert it into the db
@@ -667,17 +673,10 @@ public final class TimelineManager {
 					eventDescription.getMedDescription(),
 					eventDescription.getShortDescription(),
 					hasHashHits,
-					sleuthkitCase.getBlackboardArtifactTagsByArtifact(artifact).isEmpty() == false));
+					sleuthkitCase.getBlackboardArtifactTagsByArtifact(artifact).isEmpty() == false,
+					connection));
 		}
 		return Optional.empty();
-	}
-
-	private TimelineEvent addEvent(long time, EventType type, long datasourceObjID, long fileObjID,
-			Long artifactID, String fullDescription, String medDescription,
-			String shortDescription, boolean hashHit, boolean tagged) throws TskCoreException {
-		try (CaseDbConnection connection = getSleuthkitCase().getConnection();) {
-			return addEvent(time, type, datasourceObjID, fileObjID, artifactID, fullDescription, medDescription, shortDescription, hashHit, tagged, connection);
-		}
 	}
 
 	/**
