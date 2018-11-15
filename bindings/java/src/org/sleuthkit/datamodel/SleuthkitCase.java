@@ -467,12 +467,7 @@ public class SleuthkitCase {
 	 * @throws org.sleuthkit.datamodel.TskCoreException
 	 */
 	public TimelineManager getTimelineManager() throws TskCoreException {
-		synchronized (timelineMgrInstanceLock) {
-			if (null == timelineMgrInstance) {
-				timelineMgrInstance = new TimelineManager(this);
-			}
-			return timelineMgrInstance;
-		}
+		return getTimelineManager(null);
 	}
 
 	/**
@@ -1692,7 +1687,6 @@ public class SleuthkitCase {
 		}
 
 		acquireSingleUserCaseWriteLock();
-
 		try (Statement statement = connection.createStatement();) {
 			String primaryKeyType;
 			switch (getDatabaseType()) {
@@ -1763,9 +1757,11 @@ public class SleuthkitCase {
 			//grab ids of all files
 			List<Long> fileIDs = findAllFileIdsWhere("name != '.' AND name != '..'"
 					+ " AND type != " + TskData.TSK_DB_FILES_TYPE_ENUM.SLACK.ordinal()); //NON-NLS
+			
 			for (Long fileID : fileIDs) {
 				AbstractFile f = getAbstractFileById(fileID);
 				if (nonNull(f)) {				//for each file, add the mac time events
+					logger.log(Level.INFO, "Adding mac events for file : {0}", f.getName()); // NON-NLS
 					timelineManager.addAbstractFileEvents(f, connection);
 				} else {
 					logger.log(Level.WARNING, "Failed to get data for file : {0}", fileID); // NON-NLS
@@ -1777,6 +1773,7 @@ public class SleuthkitCase {
 				if (type instanceof ArtifactEventType) {
 					ArtifactEventType artifactEventType = (ArtifactEventType) type;
 					for (BlackboardArtifact bbart : getBlackboardArtifacts(artifactEventType.getArtifactTypeID())) {
+						logger.log(Level.INFO, "Adding  events for artifact : {0}", bbart.toString()); // NON-NLS
 						timelineManager.addEventsFromArtifact(bbart, connection);
 					}
 				}
@@ -3073,25 +3070,24 @@ public class SleuthkitCase {
 	 *                          database.
 	 */
 	ArrayList<BlackboardArtifact> getArtifactsHelper(String whereClause) throws TskCoreException {
-		CaseDbConnection connection = connections.getConnection();
+		String query = "SELECT blackboard_artifacts.artifact_id AS artifact_id, "
+				+ "blackboard_artifacts.obj_id AS obj_id, "
+				+ "blackboard_artifacts.artifact_obj_id AS artifact_obj_id, "
+				+ "blackboard_artifacts.data_source_obj_id AS data_source_obj_id, "
+				+ "blackboard_artifact_types.artifact_type_id AS artifact_type_id, "
+				+ "blackboard_artifact_types.type_name AS type_name, "
+				+ "blackboard_artifact_types.display_name AS display_name, "
+				+ "blackboard_artifacts.review_status_id AS review_status_id "
+				+ "FROM blackboard_artifacts, blackboard_artifact_types "
+				+ "WHERE blackboard_artifacts.artifact_type_id = blackboard_artifact_types.artifact_type_id "
+				+ " AND blackboard_artifacts.review_status_id !=" + BlackboardArtifact.ReviewStatus.REJECTED.getID()
+				+ " AND " + whereClause;
 		acquireSingleUserCaseReadLock();
-		ResultSet rs = null;
-		try {
-			Statement statement = connection.createStatement();
-			String query = "SELECT blackboard_artifacts.artifact_id AS artifact_id, "
-					+ "blackboard_artifacts.obj_id AS obj_id, "
-					+ "blackboard_artifacts.artifact_obj_id AS artifact_obj_id, "
-					+ "blackboard_artifacts.data_source_obj_id AS data_source_obj_id, "
-					+ "blackboard_artifact_types.artifact_type_id AS artifact_type_id, "
-					+ "blackboard_artifact_types.type_name AS type_name, "
-					+ "blackboard_artifact_types.display_name AS display_name, "
-					+ "blackboard_artifacts.review_status_id AS review_status_id "
-					+ "FROM blackboard_artifacts, blackboard_artifact_types "
-					+ "WHERE blackboard_artifacts.artifact_type_id = blackboard_artifact_types.artifact_type_id "
-					+ " AND blackboard_artifacts.review_status_id !=" + BlackboardArtifact.ReviewStatus.REJECTED.getID()
-					+ " AND " + whereClause;
-			rs = connection.executeQuery(statement, query);
-			ArrayList<BlackboardArtifact> artifacts = new ArrayList<BlackboardArtifact>();
+		try (CaseDbConnection connection = connections.getConnection();
+				Statement statement = connection.createStatement();
+				ResultSet rs = connection.executeQuery(statement, query);) {
+
+			ArrayList<BlackboardArtifact> artifacts = new ArrayList<>();
 			while (rs.next()) {
 				artifacts.add(new BlackboardArtifact(this, rs.getLong("artifact_id"), rs.getLong("obj_id"), rs.getLong("artifact_obj_id"), rs.getLong("data_source_obj_id"),
 						rs.getInt("artifact_type_id"), rs.getString("type_name"), rs.getString("display_name"),
@@ -3101,8 +3097,6 @@ public class SleuthkitCase {
 		} catch (SQLException ex) {
 			throw new TskCoreException("Error getting or creating a blackboard artifact", ex);
 		} finally {
-			closeResultSet(rs);
-			connection.close();
 			releaseSingleUserCaseReadLock();
 		}
 	}
@@ -5852,7 +5846,7 @@ public class SleuthkitCase {
 			DerivedFile derivedFile = new DerivedFile(this, newObjId, dataSourceObjId, fileName, dirType, metaType, dirFlag, metaFlags,
 					size, ctime, crtime, atime, mtime, null, null, parentPath, localPath, parentId, null, encodingType, extension);
 
-			timelineManager.addAbstractFileEvents(derivedFile, connection);
+			getTimelineManager(connection).addAbstractFileEvents(derivedFile, connection);
 			transaction.commit();
 			//TODO add derived method to tsk_files_derived and tsk_files_derived_method
 			return derivedFile;

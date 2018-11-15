@@ -67,16 +67,15 @@ public final class TimelineManager {
 
 	final private BiMap<Long, EventType> eventTypeIDMap = HashBiMap.create();
 
-	TimelineManager(SleuthkitCase tskCase) throws TskCoreException {
-		sleuthkitCase = tskCase;
-		try (CaseDbConnection connection = sleuthkitCase.getConnection();) {
-			initializeEventTypes(connection);
-		}
-	}
-
 	TimelineManager(SleuthkitCase tskCase, CaseDbConnection connection) throws TskCoreException {
 		sleuthkitCase = tskCase;
-		initializeEventTypes(connection);
+		if (connection == null) {
+			try (CaseDbConnection conn = sleuthkitCase.getConnection();) {
+				initializeEventTypes(conn);
+			}
+		} else {
+			initializeEventTypes(connection);
+		}
 	}
 
 	public SleuthkitCase getSleuthkitCase() {
@@ -208,7 +207,19 @@ public final class TimelineManager {
 			stmt.setLong(1, eventID);
 			try (ResultSet results = stmt.executeQuery();) {
 				if (results.next()) {
-					return constructTimeLineEvent(results);
+					int typeID = results.getInt("sub_type"); //NON-NLS
+					return new TimelineEvent(results.getLong("event_id"), //NON-NLS
+							results.getLong("data_source_obj_id"), //NON-NLS
+							results.getLong("file_obj_id"), //NON-NLS
+							results.getLong("artifact_id"), //NON-NLS
+							results.getLong("time"), //NON-NLS
+							getEventType(typeID).orElseThrow(() -> newEventTypeMappingException(typeID)), //NON-NLS
+							results.getString("full_description"), //NON-NLS
+							results.getString("med_description"), //NON-NLS
+							results.getString("short_description"), //NON-NLS
+							results.getInt("hash_hit") != 0, //NON-NLS
+							results.getInt("tagged") != 0) //NON-NLS
+					;
 				}
 			}
 		} catch (SQLException sqlEx) {
@@ -543,9 +554,10 @@ public final class TimelineManager {
 			shortDesc = shortDesc.endsWith("/") ? shortDesc : shortDesc + "/";
 			String medDesc = parentPath;
 			String fullDescription = medDesc + file.getName();
-
+			boolean hasHashHits = file.getHashSetNames().isEmpty() == false;
 			for (Map.Entry<EventType, Long> timeEntry : timeMap.entrySet()) {
 				if (timeEntry.getValue() > 0) {
+
 					// if the time is legitimate ( greater than zero ) insert it
 					addEvent(timeEntry.getValue(),
 							timeEntry.getKey(),
@@ -554,9 +566,10 @@ public final class TimelineManager {
 							null,
 							fullDescription,
 							medDesc,
-							shortDesc,
-							file.getHashSetNames().isEmpty() == false,
-							false, connection);
+							shortDesc, 
+							hasHashHits,
+							false, //TODO: this need to be populated for data migration.
+							connection);
 				}
 			}
 		}
@@ -854,24 +867,8 @@ public final class TimelineManager {
 		return eventIDs;
 	}
 
-	void rollBackTransaction(SleuthkitCase.CaseDbTransaction trans) throws TskCoreException {
-		trans.rollback();
-	}
+	
 
-	private TimelineEvent constructTimeLineEvent(ResultSet resultSet) throws SQLException, TskCoreException {
-		int typeID = resultSet.getInt("sub_type"); //NON-NLS
-		return new TimelineEvent(resultSet.getLong("event_id"), //NON-NLS
-				resultSet.getLong("data_source_obj_id"), //NON-NLS
-				resultSet.getLong("file_obj_id"), //NON-NLS
-				resultSet.getLong("artifact_id"), //NON-NLS
-				resultSet.getLong("time"), //NON-NLS
-				getEventType(typeID).orElseThrow(() -> newEventTypeMappingException(typeID)), //NON-NLS
-				resultSet.getString("full_description"), //NON-NLS
-				resultSet.getString("med_description"), //NON-NLS
-				resultSet.getString("short_description"), //NON-NLS
-				resultSet.getInt("hash_hit") != 0, //NON-NLS
-				resultSet.getInt("tagged") != 0); //NON-NLS
-	}
 
 	private static TskCoreException newEventTypeMappingException(int typeID) {
 		return new TskCoreException("Error mapping event type id " + typeID);
