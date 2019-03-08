@@ -50,6 +50,8 @@ import org.sleuthkit.datamodel.timeline.TimelineEvent.EventDescription;
  */
 public interface EventType extends Comparable<EventType> {
 
+	 
+
 	String getDisplayName();
 
 	long getTypeID();
@@ -302,9 +304,10 @@ public interface EventType extends Comparable<EventType> {
 			BASE_TYPE, ROOT_EVENT_TYPE) {
 		@Override
 		public SortedSet< EventType> getSubTypes() {
-			return ImmutableSortedSet.of(OTHER);
+			return ImmutableSortedSet.of(OTHER, USER_CREATED);
 		}
 	};
+
 
 	//generic catch all other event
 	ArtifactEventType OTHER = new SingleDescriptionArtifactEventType(23,
@@ -329,6 +332,15 @@ public interface EventType extends Comparable<EventType> {
 			new BlackboardAttribute.Type(TSK_DATETIME),
 			new BlackboardAttribute.Type(TSK_DESCRIPTION));
 
+		//generic catch all other event
+	ArtifactEventType USER_CREATED = new SingleDescriptionArtifactEventType(26,
+			getBundle().getString("CustomTypes.userCreated.name"),
+			CUSTOM_TYPES,
+			new BlackboardArtifact.Type(TSK_TL_EVENT),
+			new BlackboardAttribute.Type(TSK_DATETIME),
+			new BlackboardAttribute.Type(TSK_DESCRIPTION));
+	
+	
 	static SortedSet<? extends EventType> getBaseTypes() {
 		return ROOT_EVENT_TYPE.getSubTypes();
 	}

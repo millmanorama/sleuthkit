@@ -82,9 +82,10 @@ public final class TimelineManager {
 	private static final ImmutableList<EventType> PREDEFINED_EVENT_TYPES
 			= new ImmutableList.Builder<EventType>()
 					.add(EventType.CUSTOM_TYPES)
-					.addAll(EventType.getWebActivityTypes())
-					.addAll(EventType.getMiscTypes())
-					.add(EventType.OTHER).build();
+					.addAll(EventType.WEB_ACTIVITY.getSubTypes())
+					.addAll(EventType.MISC_TYPES.getSubTypes())
+					.addAll(EventType.CUSTOM_TYPES.getSubTypes())
+					.build();
 
 	private final SleuthkitCase sleuthkitCase;
 
