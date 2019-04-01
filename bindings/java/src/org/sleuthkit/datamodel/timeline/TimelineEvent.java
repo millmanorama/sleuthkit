@@ -292,6 +292,5 @@ public final class TimelineEvent {
 		 * @return The description of this event at the given level of detail.
 		 */
 		public String getDescription(DescriptionLoD lod);
-
 	}
 }
