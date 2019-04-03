@@ -232,7 +232,6 @@ public abstract class TimelineFilter {
 
 		public void removeFilterForTag(TagName tagName) {
 			getSubFilters().removeIf(subfilter -> subfilter.getTagName().equals(tagName));
-			getSubFilters().sort(Comparator.comparing(TagNameFilter::getDisplayName));
 		}
 	}
 
@@ -252,18 +251,12 @@ public abstract class TimelineFilter {
 		}
 
 		@Override
-		public void addSubFilter(SubFilterType subfilter) {
-			super.addSubFilter(subfilter);
-		}
-
-		@Override
 		public String getSQLWhere(TimelineManager manager) {
 			String join = getSubFilters().stream()
 					.map(subFilter -> subFilter.getSQLWhere(manager))
 					.collect(Collectors.joining(" OR "));
 			return join.isEmpty() ? manager.getSQLWhere(null) : "(" + join + ")";
 		}
-
 	}
 
 	/**
@@ -454,27 +447,27 @@ public abstract class TimelineFilter {
 				return false;
 			}
 			final RootFilter other = (RootFilter) obj;
-			if (!Objects.equals(this.knownFilter, other.knownFilter)) {
-				return false;
-			}
-			if (!Objects.equals(this.tagsFilter, other.tagsFilter)) {
-				return false;
-			}
-			if (!Objects.equals(this.hashFilter, other.hashFilter)) {
-				return false;
-			}
-			if (!Objects.equals(this.textFilter, other.textFilter)) {
-				return false;
-			}
-			if (!Objects.equals(this.typeFilter, other.typeFilter)) {
-				return false;
-			}
-			if (!Objects.equals(this.dataSourcesFilter, other.dataSourcesFilter)) {
-				return false;
-			}
-			if (!Objects.equals(this.fileTypesFilter, other.fileTypesFilter)) {
-				return false;
-			}
+//			if (!Objects.equals(this.knownFilter, other.knownFilter)) {
+//				return false;
+//			}
+//			if (!Objects.equals(this.tagsFilter, other.tagsFilter)) {
+//				return false;
+//			}
+//			if (!Objects.equals(this.hashFilter, other.hashFilter)) {
+//				return false;
+//			}
+//			if (!Objects.equals(this.textFilter, other.textFilter)) {
+//				return false;
+//			}
+//			if (!Objects.equals(this.typeFilter, other.typeFilter)) {
+//				return false;
+//			}
+//			if (!Objects.equals(this.dataSourcesFilter, other.dataSourcesFilter)) {
+//				return false;
+//			}
+//			if (!Objects.equals(this.fileTypesFilter, other.fileTypesFilter)) {
+//				return false;
+//			}
 			if (!Objects.equals(this.namedSubFilters, other.namedSubFilters)) {
 				return false;
 			}
@@ -534,9 +527,10 @@ public abstract class TimelineFilter {
 	 */
 	public static abstract class CompoundFilter<SubFilterType extends TimelineFilter> extends TimelineFilter {
 
-		protected void addSubFilter(SubFilterType subfilter) {
+		public void addSubFilter(SubFilterType subfilter) {
 			if (getSubFilters().contains(subfilter) == false) {
 				getSubFilters().add(subfilter);
+				getSubFilters().sort(Comparator.comparing(SubFilterType::getDisplayName));
 			}
 		}
 
@@ -585,7 +579,7 @@ public abstract class TimelineFilter {
 				return false;
 			}
 			final CompoundFilter<?> other = (CompoundFilter<?>) obj;
-			return Objects.equals(this.getSubFilters() , other.getSubFilters());
+			return Objects.equals(this.getSubFilters(), other.getSubFilters());
 		}
 
 		@Override
@@ -821,9 +815,7 @@ public abstract class TimelineFilter {
 		@Override
 		public String getDisplayName() {
 			return BundleProvider.getBundle().getString("FileTypesFilter.displayName.text");
-
 		}
-
 	}
 
 	/**
