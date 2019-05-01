@@ -345,7 +345,7 @@ public abstract class TimelineFilter {
 
 	/**
 	 * An implementation of IntersectionFilter designed to be used as the root
-	 * of a filter tree. provides named access to specific subfilters.
+	 * of a filter tree. Provides named access to specific subfilters.
 	 */
 	public static final class RootFilter extends IntersectionFilter<TimelineFilter> {
 
@@ -427,6 +427,11 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String toString() {
+			/*
+			 * This doesn't include the subfilters inherited from
+			 * IntersectionFitler, but that is probably ok since this is realy
+			 * just for debugging.
+			 */
 			return "RootFilter{" + "knownFilter=" + knownFilter
 					+ ", tagsFilter=" + tagsFilter
 					+ ", hashFilter=" + hashFilter
@@ -439,14 +444,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public int hashCode() {
-			int hash = 7;
-			hash = 17 * hash + Objects.hashCode(this.knownFilter);
-			hash = 17 * hash + Objects.hashCode(this.tagsFilter);
-			hash = 17 * hash + Objects.hashCode(this.hashFilter);
-			hash = 17 * hash + Objects.hashCode(this.textFilter);
-			hash = 17 * hash + Objects.hashCode(this.typeFilter);
-			hash = 17 * hash + Objects.hashCode(this.dataSourcesFilter);
-			hash = 17 * hash + Objects.hashCode(this.fileTypesFilter);
+			int hash = super.hashCode();
 			hash = 17 * hash + Objects.hashCode(this.namedSubFilters);
 			return hash;
 		}
@@ -462,27 +460,8 @@ public abstract class TimelineFilter {
 			if (getClass() != obj.getClass()) {
 				return false;
 			}
-			final RootFilter other = (RootFilter) obj;
-			if (notEqual(this.knownFilter, other.knownFilter)) {
-				return false;
-			}
-			if (notEqual(this.tagsFilter, other.tagsFilter)) {
-				return false;
-			}
-			if (notEqual(this.hashFilter, other.hashFilter)) {
-				return false;
-			}
-			if (notEqual(this.textFilter, other.textFilter)) {
-				return false;
-			}
-			if (notEqual(this.typeFilter, other.typeFilter)) {
-				return false;
-			}
-			if (notEqual(this.dataSourcesFilter, other.dataSourcesFilter)) {
-				return false;
-			}
-
-			if (notEqual(this.fileTypesFilter, other.fileTypesFilter)) {
+			RootFilter other = (RootFilter) obj;
+			if (Objects.equals(getSubFilters(), other.getSubFilters()) == false) {
 				return false;
 			}
 			return Objects.equals(this.namedSubFilters, other.namedSubFilters);
@@ -796,7 +775,7 @@ public abstract class TimelineFilter {
 	}
 
 	/**
-	 * union of DataSourceFilters
+	 * Union of DataSourceFilters
 	 */
 	static public final class DataSourcesFilter extends UnionFilter< DataSourceFilter> {
 
@@ -830,7 +809,6 @@ public abstract class TimelineFilter {
 			return BundleProvider.getBundle().getString("FileTypesFilter.displayName.text");//NON-NLS
 
 		}
-
 	}
 
 	/**
