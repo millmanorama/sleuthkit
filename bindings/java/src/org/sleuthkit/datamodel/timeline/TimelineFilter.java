@@ -1,7 +1,7 @@
 /*
  * Sleuth Kit Data Model
  *
- * Copyright 2018 Basis Technology Corp.
+ * Copyright 2018-2019 Basis Technology Corp.
  * Contact: carrier <at> sleuthkit <dot> org
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,7 +98,7 @@ public abstract class TimelineFilter {
 			String subFilterDisplayNames = getSubFilters().stream()
 					.map(TimelineFilter::getDisplayName)
 					.collect(joining(","));
-			return BundleProvider.getBundle().getString("IntersectionFilter.displayName.text") + "[" + subFilterDisplayNames + "]";
+			return BundleProvider.getBundle().getString("IntersectionFilter.displayName.text") + "[" + subFilterDisplayNames + "]"; //NON-NLS
 		}
 
 		@Override
@@ -108,8 +108,8 @@ public abstract class TimelineFilter {
 					.filter(Objects::nonNull)
 					.map(filter -> filter.getSQLWhere(manager))
 					.filter(sqlString -> notEqual(sqlString, trueLiteral))
-					.collect(Collectors.joining(" AND "));
-			return join.isEmpty() ? trueLiteral : "(" + join + ")";
+					.collect(Collectors.joining(" AND "));//NON-NLS
+			return join.isEmpty() ? trueLiteral : "(" + join + ")";//NON-NLS
 		}
 	}
 
@@ -160,7 +160,9 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String getDisplayName() {
-			return (EventType.ROOT_EVENT_TYPE.equals(eventType)) ? BundleProvider.getBundle().getString("TypeFilter.displayName.text") : eventType.getDisplayName();
+			return EventType.ROOT_EVENT_TYPE.equals(eventType)
+					? BundleProvider.getBundle().getString("TypeFilter.displayName.text")//NON-NLS
+					: eventType.getDisplayName();
 		}
 
 		@Override
@@ -209,7 +211,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String toString() {
-			return "EventTypeFilter{" + "eventType=" + eventType + ", subfilters=" + getSubFilters() + '}';
+			return "EventTypeFilter{" + "eventType=" + eventType + ", subfilters=" + getSubFilters() + '}'; //NON-NLS
 		}
 
 	}
@@ -222,7 +224,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String getDisplayName() {
-			return BundleProvider.getBundle().getString("tagsFilter.displayName.text");
+			return BundleProvider.getBundle().getString("tagsFilter.displayName.text");//NON-NLS
 		}
 
 		@Override
@@ -260,8 +262,8 @@ public abstract class TimelineFilter {
 		public String getSQLWhere(TimelineManager manager) {
 			String join = getSubFilters().stream()
 					.map(subFilter -> subFilter.getSQLWhere(manager))
-					.collect(Collectors.joining(" OR "));
-			return join.isEmpty() ? manager.getSQLWhere(null) : "(" + join + ")";
+					.collect(Collectors.joining(" OR "));//NON-NLS
+			return join.isEmpty() ? manager.getSQLWhere(null) : "(" + join + ")";//NON-NLS
 		}
 
 	}
@@ -288,7 +290,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String getDisplayName() {
-			return BundleProvider.getBundle().getString("TextFilter.displayName.text");
+			return BundleProvider.getBundle().getString("TextFilter.displayName.text");//NON-NLS
 		}
 
 		public synchronized String getText() {
@@ -336,7 +338,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String toString() {
-			return "TextFilter{" + "textProperty=" + textProperty.getValue() + '}';
+			return "TextFilter{" + "textProperty=" + textProperty.getValue() + '}';//NON-NLS
 		}
 
 	}
@@ -425,7 +427,14 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String toString() {
-			return "RootFilter{" + "knownFilter=" + knownFilter + ", tagsFilter=" + tagsFilter + ", hashFilter=" + hashFilter + ", textFilter=" + textFilter + ", typeFilter=" + typeFilter + ", dataSourcesFilter=" + dataSourcesFilter + ", fileTypesFilter=" + fileTypesFilter + ", namedSubFilters=" + namedSubFilters + '}';
+			return "RootFilter{" + "knownFilter=" + knownFilter
+					+ ", tagsFilter=" + tagsFilter
+					+ ", hashFilter=" + hashFilter
+					+ ", textFilter=" + textFilter
+					+ ", typeFilter=" + typeFilter
+					+ ", dataSourcesFilter=" + dataSourcesFilter
+					+ ", fileTypesFilter=" + fileTypesFilter
+					+ ", namedSubFilters=" + namedSubFilters + '}'; //NON-NLS
 		}
 
 		@Override
@@ -488,7 +497,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String getDisplayName() {
-			return BundleProvider.getBundle().getString("hideKnownFilter.displayName.text");
+			return BundleProvider.getBundle().getString("hideKnownFilter.displayName.text"); //NON-NLS
 		}
 
 		public HideKnownFilter() {
@@ -520,7 +529,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String toString() {
-			return "HideKnownFilter{" + '}';
+			return "HideKnownFilter{" + '}';//NON-NLS
 		}
 	}
 
@@ -588,7 +597,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String toString() {
-			return this.getClass().getSimpleName() + "{" + "subFilters=" + subFilters + '}';
+			return this.getClass().getSimpleName() + "{" + "subFilters=" + subFilters + '}';//NON-NLS
 		}
 
 	}
@@ -674,7 +683,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String getDisplayName() {
-			return getDataSourceName() + " (ID: " + getDataSourceID() + ")";
+			return getDataSourceName() + " (ID: " + getDataSourceID() + ")";//NON-NLS
 		}
 
 		@Override
@@ -765,7 +774,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String toString() {
-			return "TagNameFilter{" + "tagName=" + tagName + '}';
+			return "TagNameFilter{" + "tagName=" + tagName + '}';//NON-NLS
 		}
 
 	}
@@ -777,7 +786,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String getDisplayName() {
-			return BundleProvider.getBundle().getString("hashHitsFilter.displayName.text");
+			return BundleProvider.getBundle().getString("hashHitsFilter.displayName.text");//NON-NLS
 		}
 
 		@Override
@@ -802,7 +811,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String getDisplayName() {
-			return BundleProvider.getBundle().getString("DataSourcesFilter.displayName.text");
+			return BundleProvider.getBundle().getString("DataSourcesFilter.displayName.text");//NON-NLS
 		}
 	}
 
@@ -818,7 +827,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String getDisplayName() {
-			return BundleProvider.getBundle().getString("FileTypesFilter.displayName.text");
+			return BundleProvider.getBundle().getString("FileTypesFilter.displayName.text");//NON-NLS
 
 		}
 
@@ -842,13 +851,13 @@ public abstract class TimelineFilter {
 					mediaTypes.stream()
 							.map(MediaType::parse)
 							.map(FileTypeFilter::mediaTypeToSQL)
-							.collect(Collectors.joining(" OR ", "(", ")")));
+							.collect(Collectors.joining(" OR ", "(", ")")));//NON-NLS
 		}
 
 		private static String mediaTypeToSQL(MediaType mediaType) {
 			return mediaType.hasWildcard()
-					? " (tsk_events.mime_type LIKE '" + escapeSingleQuotes(mediaType.type()) + "/_%' ) "
-					: " (tsk_events.mime_type = '" + escapeSingleQuotes(mediaType.toString()) + "' ) ";
+					? " (tsk_events.mime_type LIKE '" + escapeSingleQuotes(mediaType.type()) + "/_%' ) "//NON-NLS
+					: " (tsk_events.mime_type = '" + escapeSingleQuotes(mediaType.toString()) + "' ) ";//NON-NLS
 		}
 
 		@Override
@@ -894,8 +903,7 @@ public abstract class TimelineFilter {
 
 		@Override
 		public String toString() {
-			return "FileTypeFilter{" + "displayName=" + displayName + ", sqlWhere=" + sqlWhere + '}';
+			return "FileTypeFilter{" + "displayName=" + displayName + ", sqlWhere=" + sqlWhere + '}';//NON-NLS
 		}
-
 	}
 }
