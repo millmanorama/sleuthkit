@@ -55,7 +55,7 @@ public class BlackboardArtifact implements Content {
 	private final String displayName;
 	private ReviewStatus reviewStatus;
 	private final SleuthkitCase sleuthkitCase;
-	private final List<BlackboardAttribute> attrsCache = new ArrayList<BlackboardAttribute>();
+	private final List<BlackboardAttribute> attrsCache = new ArrayList<>();
 	private boolean loadedCacheFromDb = false;
 	private Content parent;
 	private String uniquePath;
@@ -332,7 +332,7 @@ public class BlackboardArtifact implements Content {
 			attrsCache.addAll(attributes);
 			loadedCacheFromDb = true;
 		} else {
-			attributes = new ArrayList<BlackboardAttribute>(attrsCache);
+			attributes = new ArrayList<>(attrsCache);
 		}
 		return attributes;
 	}
@@ -426,7 +426,7 @@ public class BlackboardArtifact implements Content {
 	@Override
 	public ArrayList<BlackboardArtifact> getAllArtifacts() throws TskCoreException {
 		// Currently we don't have any artifacts derived from an artifact.
-		return new ArrayList<BlackboardArtifact>();
+		return new ArrayList<>();
 	}
 
 	/**
@@ -442,7 +442,7 @@ public class BlackboardArtifact implements Content {
 	@Override
 	public ArrayList<BlackboardArtifact> getArtifacts(String artifactTypeName) throws TskCoreException {
 		// Currently we don't have any artifacts derived from an artifact.
-		return new ArrayList<BlackboardArtifact>();
+		return new ArrayList<>();
 	}
 
 	/**
@@ -458,7 +458,7 @@ public class BlackboardArtifact implements Content {
 	@Override
 	public ArrayList<BlackboardArtifact> getArtifacts(int artifactTypeID) throws TskCoreException {
 		// Currently we don't have any artifacts derived from an artifact.
-		return new ArrayList<BlackboardArtifact>();
+		return new ArrayList<>();
 	}
 
 	/**
@@ -473,7 +473,7 @@ public class BlackboardArtifact implements Content {
 	@Override
 	public ArrayList<BlackboardArtifact> getArtifacts(BlackboardArtifact.ARTIFACT_TYPE type) throws TskCoreException {
 		// Currently we don't have any artifacts derived from an artifact.
-		return new ArrayList<BlackboardArtifact>();
+		return new ArrayList<>();
 	}
 
 	/**
@@ -600,7 +600,7 @@ public class BlackboardArtifact implements Content {
 	@Override
 	public Set<String> getHashSetNames() throws TskCoreException {
 		// Currently we don't have any artifacts derived from an artifact.
-		return new HashSet<String>();
+		return new HashSet<>();
 	}
 
 	/**
@@ -1201,11 +1201,15 @@ public class BlackboardArtifact implements Content {
 		TSK_WEB_CACHE(52, "TSK_WEB_CACHE", //NON-NLS
 				bundle.getString("BlackboardArtifact.tskWebCache.text")),
 		/**
+		 * Indicates clipboard content
+		 */
+		TSK_CLIPBOARD_CONTENT(53, "TSK_CLIPBOARD_CONTENT", //NON-NLS
+				bundle.getString("BlackboardArtifact.tskClipboardContent.text")),
+		/**
 		 * A generic (timeline) event.
 		 */
-		TSK_TL_EVENT(53, "TSK_TL_EVENT", //NON-NLS
+		TSK_TL_EVENT(54, "TSK_TL_EVENT", //NON-NLS
 				bundle.getString("BlackboardArtifact.tskTLEvent.text"));
-
 		private final String label;
 		private final int typeId;
 		private final String displayName;
@@ -1425,7 +1429,7 @@ public class BlackboardArtifact implements Content {
 			attrsCache.addAll(attrs);
 			loadedCacheFromDb = true;
 		}
-		ArrayList<BlackboardAttribute> filteredAttributes = new ArrayList<BlackboardAttribute>();
+		ArrayList<BlackboardAttribute> filteredAttributes = new ArrayList<>();
 		for (BlackboardAttribute attr : attrsCache) {
 			if (attr.getAttributeType().getTypeID() == attributeType.getTypeID()) {
 				filteredAttributes.add(attr);
@@ -1449,7 +1453,7 @@ public class BlackboardArtifact implements Content {
 	 */
 	@Override
 	public List<Long> getChildrenIds() throws TskCoreException {
-		List<Long> childrenIDs = new ArrayList<Long>();
+		List<Long> childrenIDs = new ArrayList<>();
 		childrenIDs.addAll(getSleuthkitCase().getAbstractFileChildrenIds(this));
 		childrenIDs.addAll(getSleuthkitCase().getBlackboardArtifactChildrenIds(this));
 
